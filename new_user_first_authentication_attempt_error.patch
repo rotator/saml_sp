@@ -1,0 +1,85 @@
+Index: modules/saml_sp_drupal_login/saml_sp_drupal_login.module
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- modules/saml_sp_drupal_login/saml_sp_drupal_login.module	(revision 5eba42d5ed854c227b0d8b8d215b1fb569088fab)
++++ modules/saml_sp_drupal_login/saml_sp_drupal_login.module	(revision )
+@@ -168,14 +168,18 @@
+         $email = $attributes['mail'][0];
+       }
+       catch (Exception $e) {
+-        \Drupal::logger('saml_sp')->error('No mail attribute available, please check IdP configuration, %exception', array('%exception' => $e->message));
++        \Drupal::logger('saml_sp')->error('No mail attribute available, please check IdP configuration, %exception', array('%exception' => $e->getMessage()));
+       }
+     }
+     else {
+       $email = $saml_response->getNameId();
+     }
++
+     if ($account = saml_sp_drupal_login_get_uid($name_id, $idp->nameid_field, $email)) {
+-       user_login_finalize($account);
++      if (is_numeric($account)) {
++        $account = user_load($account);
++      }
++      user_login_finalize($account);
+       return new RedirectResponse(\Drupal::url('<front>'));
+       // TODO make the following work as expected and allow the code to be processed
+       // Update email address if it has changed on IdP
+@@ -216,7 +220,7 @@
+       $user->activate();
+       // Save user account.
+       $result = $user->save();
+-      \Drupal::logger('saml_sp')->notice('New SSO user account for %mail with UID %uid', array('%mail' => $email, '%uid' => $user->iddebt));
++      \Drupal::logger('saml_sp')->notice('New SSO user account for %mail with UID %uid', array('%mail' => $email, '%uid' => $user->id()));
+     }
+     else if (\Drupal::config('saml_sp_drupal_login.config')->get('no_account_authenticated_user_role')  && \Drupal::config('saml_sp_drupal_login.config')->get('no_account_authenticated_user_account')) {
+       // the user has no account but the setting allows for them to get an authenticated role
+@@ -240,7 +244,7 @@
+     }
+ 
+     // @see user_login_name_validate().
+-    if (user_is_blocked($account->getAccountName())) {
++    if ($account instanceof \Drupal\user\UserInterface && user_is_blocked($account->getAccountName())) {
+       drupal_set_message(t('The username %name has not been activated or is blocked.', array('%name' => $account->getAccountName())));
+       if (\Drupal::config('saml_sp.settings')->get('debug')) {
+         if (\Drupal::moduleHandler()->moduleExists('devel')) {
+@@ -256,29 +260,31 @@
+ 
+     // Reset any flood control.
+     // @see user_login_final_validate().
+-    if (variable_get('user_failed_login_identifier_uid_only', FALSE)) {
++    /*if (variable_get('user_failed_login_identifier_uid_only', FALSE)) {
+       $identifier = $account->uid;
+     }
+     else {
+       $identifier = $account->uid . '-' . ip_address();
+-    }
++    } */
+     /*
+     $flood = \Drupal::flood();
+     flood_clear_event('failed_login_attempt_user', $identifier);
+-*/
++ */
++
+     // @see user_login_submit().
+-    global $user;
+-    $user = user_load($account->uid);
++    if ($account instanceof \Drupal\user\UserInterface) {
++      $user = user_load($account->uid);
++    }
+ 
+     $edit = array();
+     // Adding redirect path to where user started the login from
+     $edit['redirect'] = $_POST['RelayState'];
+-    \Drupal::logger('saml_sp')->notice('User %name logging in through SAML via %idp_name. with NameID %mail', array('%name' => $user->name, '%idp_name' => $idp->name, '%mail' => $email));
++    \Drupal::logger('saml_sp')->notice('User %name logging in through SAML via %idp_name. with NameID %mail', array('%name' => $user->getAccountName(), '%idp_name' => $idp->label(), '%mail' => $email));
+ 
+     // Store the fact that the user logged in via the SAML SP module.
+     $_SESSION['authenticated_via_saml_sp'] = TRUE;
+ 
+-    user_login_finalize($edit);
++    user_login_finalize($user);
+   }
+   return new RedirectResponse(\Drupal::url('<front>'));
+ }
