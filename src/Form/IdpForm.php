@@ -12,6 +12,7 @@ use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\Core\Link;
+use OneLogin_Saml2_Utils;
 
 class IdpForm extends EntityForm {
 
@@ -188,7 +189,7 @@ class IdpForm extends EntityForm {
       }
       $title = t('Certificate');
       if (function_exists('openssl_x509_parse')) {
-        $cert = openssl_x509_parse(\OneLogin_Saml2_Utils::formatCert($encoded_cert));
+        $cert = openssl_x509_parse(OneLogin_Saml2_Utils::formatCert($encoded_cert));
         if ($cert) {
           // flatten the issuer array
           foreach ($cert['issuer'] AS $key => &$value) {

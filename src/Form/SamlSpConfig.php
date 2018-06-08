@@ -13,6 +13,7 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\Url;
 use Drupal\Core\Link;
 use XMLSecurityKey;
+use OneLogin_Saml2_Utils;
 
 class SamlSpConfig extends ConfigFormBase {
   /**
@@ -261,7 +262,7 @@ class SamlSpConfig extends ConfigFormBase {
         function_exists('openssl_x509_parse'))
     {
       $encoded_cert = trim(file_get_contents($config->get('cert_location')));
-      $cert = openssl_x509_parse(\OneLogin_Saml2_Utils::formatCert($encoded_cert));
+      $cert = openssl_x509_parse(OneLogin_Saml2_Utils::formatCert($encoded_cert));
       // flatten the issuer array
       if (!empty($cert['issuer'])) {
         foreach ($cert['issuer'] AS $key => &$value) {
